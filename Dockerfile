@@ -2,10 +2,10 @@
 FROM node:18
 
 # Set the working directory inside the container
-WORKDIR /usr/src/app
+WORKDIR /app
 
 # Copy package.json and package-lock.json first (to leverage Docker cache for better performance)
-COPY package*.json ./
+COPY package.json ./
 
 # Install backend dependencies
 RUN npm install
@@ -13,8 +13,13 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
-# Expose the backend API port (default is 5000, adjust if needed)
-EXPOSE 5173
-
 # Command to run the app
-CMD ["npm", "start"]
+RUN npm run build
+
+# server with nginx
+FROM nginx:1-23-alpine
+WORKDIR /usr/share/nginx/html
+RUN rm -rf *
+COPY --from=build /app/build .
+EXPOSE 80
+ENTRYPOINT ["nginx", "-g", "deamon off;"]

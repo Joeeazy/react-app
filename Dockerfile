@@ -1,11 +1,11 @@
 # Use official Node.js image as the base image
-FROM node:18
+FROM node:18 AS build
 
 # Set the working directory inside the container
 WORKDIR /app
 
 # Copy package.json and package-lock.json first (to leverage Docker cache for better performance)
-COPY package.json ./
+COPY package.json package-lock.json ./
 
 # Install backend dependencies
 RUN npm install
@@ -13,13 +13,22 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
-# Command to run the app
+# Build the app
 RUN npm run build
 
-# server with nginx
-FROM nginx:1-23-alpine
+# Use Nginx to serve the built files
+FROM nginx:1.23-alpine
 WORKDIR /usr/share/nginx/html
-RUN rm -rf *
-COPY --from=build /app/build .
+
+# Remove the default Nginx static files
+RUN rm -rf ./*
+
+# Copy the build output from the previous stage
+COPY --from=build /app/dist ./
+
+# Expose port 80
 EXPOSE 80
-ENTRYPOINT ["nginx", "-g", "deamon off;"]
+
+# Start Nginx server
+ENTRYPOINT ["nginx", "-g", "daemon off;"]
+
